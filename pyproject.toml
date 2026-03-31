@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dp-group-stats"
+version = "0.1.0"
+description = "Differentially private group statistics for working-hours data"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+keywords = ["privacy", "differential-privacy", "k-anonymity", "statistics", "working-hours"]
+authors = [
+    { name = "Open Working Hours contributors" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://github.com/open-working-hours/dp-group-stats"
+Repository = "https://github.com/open-working-hours/dp-group-stats"
+Issues = "https://github.com/open-working-hours/dp-group-stats/issues"
+Changelog = "https://github.com/open-working-hours/dp-group-stats/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+dp-group-stats-sim = "dp_group_stats.simulation:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dp_group_stats = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+minversion = "7.0"
