@@ -39,7 +39,7 @@ from .mechanisms import laplace_ci_half_width, laplace_noise
 from .periods import compute_period_index, get_period_bounds, period_before
 from .policy import PublicationStatus, get_publication_status
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     # config

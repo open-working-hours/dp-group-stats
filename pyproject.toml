@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dp-group-stats"
-version = "0.1.1"
+version = "0.1.2"
 description = "Differentially private publication pipeline for aggregate group statistics with k-anonymity gating and budget accounting"
 readme = "README.md"
 license = "MIT"

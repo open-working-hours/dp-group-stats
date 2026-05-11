@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.2] - 2026-05-11
+
+### Fixed
+- README links to design specs and simulation spec now use absolute GitHub URLs so they work on PyPI
+
 ## [0.1.1] - 2026-05-11
 
 ### Fixed

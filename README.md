@@ -127,7 +127,7 @@ Bring your own storage backend by implementing the `PrivacyLedger` protocol (e.g
 
 ## Design decisions
 
-This library makes specific choices documented in the [design specs](docs/):
+This library makes specific choices documented in the [design specs](https://github.com/lukashondrich/dp-group-stats/tree/main/docs):
 
 - **Substitution neighboring relation**: DP protects contribution *values*, not user *presence*. Counts are public; only sums are noised.
 - **Per-user budget accounting**: the privacy guarantee lives with users, not cells. A user appearing in multiple release families accumulates epsilon across all of them.
@@ -136,7 +136,7 @@ This library makes specific choices documented in the [design specs](docs/):
 
 ## Developed for
 
-This library was extracted from [Open Working Hours](https://github.com/lukashondrich/open_workinghours), a privacy-first platform for healthcare workers to track and report working hours. The design was validated through [200+ simulation scenarios](docs/simulation-spec.md) covering parameter selection for workforce statistics.
+This library was extracted from [Open Working Hours](https://github.com/lukashondrich/open_workinghours), a privacy-first platform for healthcare workers to track and report working hours. The design was validated through [200+ simulation scenarios](https://github.com/lukashondrich/dp-group-stats/blob/main/docs/simulation-spec.md) covering parameter selection for workforce statistics.
 
 ## License
 
