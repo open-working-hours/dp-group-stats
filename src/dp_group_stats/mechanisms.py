@@ -32,8 +32,8 @@ def laplace_noise(
     u = rand.uniform(-0.5, 0.5)
 
     if u < 0:
-        return scale * (1 + u * 2)
-    return -scale * (1 - u * 2)
+        return scale * math.log(1 + 2 * u)
+    return -scale * math.log(1 - 2 * u)
 
 
 def laplace_ci_half_width(

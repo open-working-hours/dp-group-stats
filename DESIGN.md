@@ -1,6 +1,6 @@
 # Design Overview
 
-This document summarizes the privacy architecture of dp-group-stats. For the full specification, see the [accounting model spec](https://github.com/open-working-hours/dp-group-stats/blob/main/DESIGN.md) (this document) and the threat model (forthcoming).
+This document summarizes the privacy architecture of dp-group-stats. For the full specification, see the [accounting model spec](https://github.com/lukashondrich/dp-group-stats/blob/main/DESIGN.md) (this document) and the threat model (forthcoming).
 
 ## Problem
 

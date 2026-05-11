@@ -20,8 +20,9 @@ def test_laplace_noise_returns_zero_for_zero_sensitivity() -> None:
 
 
 def test_laplace_noise_uses_injected_rng() -> None:
+    # u=0.25 >= 0 → -scale * log(1 - 2*0.25) = -10 * log(0.5) ≈ 6.931
     noise = laplace_noise(epsilon=1.0, sensitivity=10.0, rng=StubRng(0.25))
-    assert noise == pytest.approx(-5.0)
+    assert noise == pytest.approx(-10.0 * math.log(0.5))
 
 
 def test_laplace_noise_rejects_negative_epsilon() -> None:
@@ -35,12 +36,23 @@ def test_laplace_noise_rejects_negative_sensitivity() -> None:
 
 
 def test_laplace_noise_statistical_properties() -> None:
-    """Verify mean ~0 and scale matches sensitivity/epsilon over many samples."""
+    """Verify the distribution is actually Laplace: mean, variance, kurtosis, tails."""
     import random
     rng = random.Random(42)
-    samples = [laplace_noise(epsilon=2.0, sensitivity=10.0, rng=rng) for _ in range(10_000)]
-    mean = sum(samples) / len(samples)
-    assert abs(mean) < 0.5  # should be close to 0
+    eps, sens = 2.0, 10.0
+    scale = sens / eps  # b = 5
+    samples = [laplace_noise(epsilon=eps, sensitivity=sens, rng=rng) for _ in range(50_000)]
+    n = len(samples)
+    mean = sum(samples) / n
+    variance = sum((x - mean) ** 2 for x in samples) / n
+    m4 = sum((x - mean) ** 4 for x in samples) / n
+    excess_kurtosis = m4 / variance**2 - 3
+    tail_fraction = sum(1 for x in samples if abs(x) > scale) / n
+
+    assert abs(mean) < 0.5  # mean ≈ 0
+    assert variance == pytest.approx(2 * scale**2, rel=0.15)  # Var = 2b²
+    assert excess_kurtosis == pytest.approx(3.0, abs=1.0)  # Laplace kurtosis = 3
+    assert tail_fraction > 0.25  # Laplace: P(|X|>b) ≈ 0.368; uniform: 0
 
 
 def test_ci_basic_calculation() -> None:

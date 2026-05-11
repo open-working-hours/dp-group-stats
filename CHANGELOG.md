@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.1] - 2026-05-11
+
+### Fixed
+- **Critical:** `laplace_noise()` was sampling from a uniform distribution instead of Laplace — the inverse CDF was missing `math.log()`, producing bounded linear noise rather than the heavy-tailed Laplace noise required for ε-differential privacy
+- Strengthened statistical tests to verify variance, kurtosis, and tail behavior (would have caught the above)
+- Fixed broken self-referential link in DESIGN.md
+
 ## [0.1.0] - 2026-03-23
 
 ### Added
