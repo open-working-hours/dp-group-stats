@@ -1,14 +1,29 @@
-"""Publication state machine: controls when cells are published, suppressed, or transitioning."""
-
 from __future__ import annotations
 
 from enum import Enum
 
-__all__ = ["PublicationStatus", "get_publication_status"]
-
 
 class PublicationStatus(str, Enum):
-    """Lifecycle state of a release cell."""
+    """State machine for cell publication lifecycle.
+
+    Transitions::
+
+        suppressed --> warming_up --> published --> cooling_down --> suppressed
+                                          ^                            |
+                                          +----------------------------+
+                                          (re-eligible before grace expires)
+
+    - ``warming_up``: cell is above k_min but hasn't met the activation
+      streak yet. No output, no epsilon cost.
+    - ``published``: cell is actively published. Noise is generated and
+      epsilon is recorded.
+    - ``cooling_down``: cell dropped below eligibility but is within the
+      grace period. Noise is still generated (sudden disappearance of
+      noise is itself informative).
+    - ``suppressed``: cell is below k_min or failed the dominance check.
+      No output, no epsilon cost.
+    """
+
     published = "published"
     suppressed = "suppressed"
     warming_up = "warming_up"
@@ -23,6 +38,20 @@ def get_publication_status(
     activation_weeks: int,
     deactivation_grace_weeks: int,
 ) -> PublicationStatus:
+    """Determine a cell's publication status based on eligibility streaks.
+
+    Args:
+        was_active: Whether the cell was in ``published`` or ``cooling_down``
+            state in the previous period.
+        consecutive_eligible: Number of consecutive periods the cell has
+            met k_min and dominance requirements.
+        consecutive_ineligible: Number of consecutive periods the cell has
+            failed eligibility.
+        activation_weeks: Required consecutive eligible periods before
+            first publication.
+        deactivation_grace_weeks: Grace periods below eligibility before
+            suppression (noise continues during grace).
+    """
     if activation_weeks < 1:
         raise ValueError("activation_weeks must be at least 1")
     if deactivation_grace_weeks < 1:

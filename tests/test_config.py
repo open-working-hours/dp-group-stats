@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from dp_group_stats import (
+from dp_group_stats.config import (
     ContributionBounds,
-    DPGroupStatsV1Config,
+    DPGroupStatsConfig,
     EpsilonSplit,
     ReleasePolicyConfig,
     periods_per_year,
@@ -13,16 +13,34 @@ from dp_group_stats import (
 
 def test_contribution_bounds_clip_values() -> None:
     bounds = ContributionBounds()
-
     assert bounds.clip_planned(-5.0) == 0.0
     assert bounds.clip_planned(120.0) == 80.0
     assert bounds.clip_actual(-1.0) == 0.0
     assert bounds.clip_actual(180.0) == 120.0
 
 
+def test_contribution_bounds_sensitivity() -> None:
+    bounds = ContributionBounds()
+    assert bounds.planned_sensitivity == 80.0
+    assert bounds.actual_sensitivity == 120.0
+
+
+def test_contribution_bounds_custom() -> None:
+    bounds = ContributionBounds(planned_weekly_min=10, planned_weekly_max=50,
+                                actual_weekly_min=5, actual_weekly_max=100)
+    assert bounds.clip_planned(5) == 10
+    assert bounds.clip_actual(200) == 100
+    assert bounds.planned_sensitivity == 40.0
+    assert bounds.actual_sensitivity == 95.0
+
+
+def test_contribution_bounds_invalid() -> None:
+    with pytest.raises(ValueError):
+        ContributionBounds(planned_weekly_min=80, planned_weekly_max=10)
+
+
 def test_epsilon_split_total() -> None:
     split = EpsilonSplit(planned_sum=0.2, actual_sum=0.8)
-
     assert split.total == pytest.approx(1.0)
 
 
@@ -31,6 +49,11 @@ def test_epsilon_split_defaults() -> None:
     assert split.planned_sum == 0.2
     assert split.actual_sum == 0.8
     assert split.total == pytest.approx(1.0)
+
+
+def test_epsilon_split_rejects_zero() -> None:
+    with pytest.raises(ValueError):
+        EpsilonSplit(planned_sum=0, actual_sum=0.5)
 
 
 def test_release_policy_config_validates_positive_values() -> None:
@@ -53,27 +76,25 @@ def test_dominance_threshold_in_config() -> None:
 
 
 def test_config_validates_annual_budget_cap() -> None:
-    config = DPGroupStatsV1Config()
+    config = DPGroupStatsConfig()
     assert config.annual_epsilon_cap == 150.0
 
-    config = DPGroupStatsV1Config(annual_epsilon_cap=52.0)
+    config = DPGroupStatsConfig(annual_epsilon_cap=52.0)
     assert config.annual_epsilon_cap == 52.0
 
     with pytest.raises(ValueError, match="exceeds annual cap"):
-        DPGroupStatsV1Config(annual_epsilon_cap=10.0)
+        DPGroupStatsConfig(annual_epsilon_cap=10.0)
 
 
 def test_config_annual_cap_with_period_type() -> None:
-    """Monthly: 1.0 x 12 = 12 <= 150."""
-    config = DPGroupStatsV1Config(period_type="monthly")
+    config = DPGroupStatsConfig(period_type="monthly")
     assert config.period_type == "monthly"
-    assert config.annual_epsilon_cap == 150.0
 
-    config = DPGroupStatsV1Config(period_type="monthly", annual_epsilon_cap=12.0)
+    config = DPGroupStatsConfig(period_type="monthly", annual_epsilon_cap=12.0)
     assert config.annual_epsilon_cap == 12.0
 
     with pytest.raises(ValueError, match="exceeds annual cap"):
-        DPGroupStatsV1Config(period_type="monthly", annual_epsilon_cap=5.0)
+        DPGroupStatsConfig(period_type="monthly", annual_epsilon_cap=5.0)
 
 
 def test_periods_per_year() -> None:

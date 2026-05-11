@@ -1,29 +1,17 @@
-"""Privacy budget accounting: ledgers, adaptive epsilon, and the PrivacyLedger protocol."""
-
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
-__all__ = [
-    "CellKey",
-    "BudgetEntry",
-    "EpsilonBreakdown",
-    "EpsilonLedger",
-    "compute_adaptive_epsilon",
-    "PrivacyLedger",
-    "InMemoryPrivacyLedger",
-]
 
 CellKey = tuple[str, ...]
-"""A tuple identifying a release cell, e.g. ``("DEU", "BE", "cardiology")``."""
 
 
 @dataclass(frozen=True, slots=True)
 class BudgetEntry:
-    """Single epsilon expenditure record for a cell in a given period."""
+    """A single recorded epsilon expenditure."""
 
     cell_key: CellKey
     period_start: date
@@ -32,7 +20,7 @@ class BudgetEntry:
 
 @dataclass(frozen=True, slots=True)
 class EpsilonBreakdown:
-    """Epsilon split into planned-sum and actual-sum components."""
+    """Per-quantity epsilon breakdown for a single cell publication."""
 
     planned_sum: float
     actual_sum: float
@@ -46,8 +34,166 @@ class EpsilonBreakdown:
         return self.planned_sum + self.actual_sum
 
 
+# ---------------------------------------------------------------------------
+# Protocol: pluggable storage backend
+# ---------------------------------------------------------------------------
+
+
+class PrivacyLedger(Protocol):
+    """Abstract interface for privacy budget accounting.
+
+    Implementations track per-user and per-cell epsilon expenditure.
+    The library ships with :class:`InMemoryPrivacyLedger`; applications
+    can provide their own (e.g., SQL-backed) implementation.
+    """
+
+    def record(
+        self,
+        *,
+        user_id: str,
+        family: str,
+        cell_key: str,
+        period_start: date,
+        epsilon: float,
+    ) -> None:
+        """Record an epsilon expenditure for a user in a cell."""
+        ...
+
+    def user_spent(self, user_id: str, since: date | None = None) -> float:
+        """Return total epsilon spent by a user, optionally since a date."""
+        ...
+
+    def cell_spent(self, cell_key: str, since: date | None = None) -> float:
+        """Return total epsilon spent on a cell, optionally since a date."""
+        ...
+
+    def all_user_totals(self, since: date | None = None) -> dict[str, float]:
+        """Return {user_id: total_spent} for all users."""
+        ...
+
+
+# ---------------------------------------------------------------------------
+# In-memory implementation
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _LedgerEntry:
+    user_id: str
+    family: str
+    cell_key: str
+    period_start: date
+    epsilon: float
+
+
+class InMemoryPrivacyLedger:
+    """In-memory implementation of :class:`PrivacyLedger`.
+
+    Suitable for testing, simulation, and short-lived pipelines.
+    """
+
+    def __init__(self) -> None:
+        self._entries: list[_LedgerEntry] = []
+        self._user_totals: dict[str, float] = defaultdict(float)
+        self._cell_totals: dict[str, float] = defaultdict(float)
+
+    def record(
+        self,
+        *,
+        user_id: str,
+        family: str,
+        cell_key: str,
+        period_start: date,
+        epsilon: float,
+    ) -> None:
+        if epsilon < 0:
+            raise ValueError("epsilon must be non-negative")
+        self._entries.append(
+            _LedgerEntry(
+                user_id=user_id,
+                family=family,
+                cell_key=cell_key,
+                period_start=period_start,
+                epsilon=epsilon,
+            )
+        )
+        self._user_totals[user_id] += epsilon
+        self._cell_totals[cell_key] += epsilon
+
+    def user_spent(self, user_id: str, since: date | None = None) -> float:
+        if since is None:
+            return self._user_totals.get(user_id, 0.0)
+        return sum(
+            e.epsilon for e in self._entries
+            if e.user_id == user_id and e.period_start >= since
+        )
+
+    def cell_spent(self, cell_key: str, since: date | None = None) -> float:
+        if since is None:
+            return self._cell_totals.get(cell_key, 0.0)
+        return sum(
+            e.epsilon for e in self._entries
+            if e.cell_key == cell_key and e.period_start >= since
+        )
+
+    def all_user_totals(self, since: date | None = None) -> dict[str, float]:
+        if since is None:
+            return dict(self._user_totals)
+        totals: dict[str, float] = defaultdict(float)
+        for e in self._entries:
+            if e.period_start >= since:
+                totals[e.user_id] += e.epsilon
+        return dict(totals)
+
+    def worst_case_user(self, since: date | None = None) -> tuple[str, float] | None:
+        """Return (user_id, total_spent) for the highest-spending user."""
+        totals = self.all_user_totals(since=since)
+        if not totals:
+            return None
+        user_id = max(totals, key=totals.get)  # type: ignore[arg-type]
+        return user_id, totals[user_id]
+
+    def budget_summary(
+        self,
+        *,
+        annual_cap: float,
+        since: date | None = None,
+    ) -> dict[str, object]:
+        """Return a summary of budget utilization."""
+        totals = self.all_user_totals(since=since)
+        n_users = len(totals)
+        if n_users == 0:
+            return {
+                "n_users": 0,
+                "worst_case_spent": 0.0,
+                "avg_spent": 0.0,
+                "utilization_pct": 0.0,
+                "annual_cap": annual_cap,
+            }
+        spends = list(totals.values())
+        worst = max(spends)
+        avg = sum(spends) / n_users
+        return {
+            "n_users": n_users,
+            "worst_case_spent": worst,
+            "avg_spent": avg,
+            "utilization_pct": (worst / annual_cap * 100) if annual_cap > 0 else 0.0,
+            "annual_cap": annual_cap,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Simple cell-level ledger (no user tracking)
+# ---------------------------------------------------------------------------
+
+
 class EpsilonLedger:
-    """In-memory per-cell epsilon ledger for tracking cumulative budget spend."""
+    """Lightweight cell-only epsilon ledger.
+
+    Tracks total spend per cell without per-user breakdown.
+    Useful for simple pipelines where per-user accounting
+    is not needed.
+    """
 
     def __init__(self) -> None:
         self._entries: list[BudgetEntry] = []
@@ -56,7 +202,6 @@ class EpsilonLedger:
     def record(self, *, cell_key: CellKey, period_start: date, epsilon: float) -> BudgetEntry:
         if epsilon < 0:
             raise ValueError("epsilon must be non-negative")
-
         entry = BudgetEntry(cell_key=cell_key, period_start=period_start, epsilon=epsilon)
         self._entries.append(entry)
         self._totals_by_cell[cell_key] += epsilon
@@ -72,6 +217,11 @@ class EpsilonLedger:
         return list(self._entries)
 
 
+# ---------------------------------------------------------------------------
+# Adaptive epsilon
+# ---------------------------------------------------------------------------
+
+
 def compute_adaptive_epsilon(
     *,
     config_epsilon: float,
@@ -82,68 +232,10 @@ def compute_adaptive_epsilon(
 ) -> float:
     """Compute adaptive per-period epsilon that never overshoots the annual cap.
 
-    Returns min(config_epsilon, remaining_budget / remaining_periods).
+    Returns ``min(config_epsilon, remaining_budget / remaining_periods)``.
+    This ensures graceful degradation: cells get noisier instead of going dark
+    when the budget runs low.
     """
     remaining = max(0.0, annual_cap - spent_so_far)
     remaining_periods = max(1, total_periods - period_index)
     return min(config_epsilon, remaining / remaining_periods)
-
-
-# ---------------------------------------------------------------------------
-# PrivacyLedger Protocol — generalized interface for budget tracking
-# (See accounting model spec Section 7.3)
-# ---------------------------------------------------------------------------
-
-
-@runtime_checkable
-class PrivacyLedger(Protocol):
-    """Storage-agnostic interface for privacy budget accounting.
-
-    Implementations: InMemoryPrivacyLedger (reference), SQL-backed (OWH backend),
-    pandas-backed (analysis scripts).
-    """
-
-    def record(
-        self, *, user_id: str, family: str, cell: str, period: date, epsilon: float
-    ) -> None: ...
-
-    def user_spent(self, user_id: str, *, since: date) -> float: ...
-
-    def cell_spent(self, cell: str, *, since: date) -> float: ...
-
-    def all_user_totals(self, *, since: date) -> dict[str, float]: ...
-
-
-class InMemoryPrivacyLedger:
-    """Reference implementation of PrivacyLedger backed by plain lists."""
-
-    @dataclass(frozen=True, slots=True)
-    class _Entry:
-        user_id: str
-        family: str
-        cell: str
-        period: date
-        epsilon: float
-
-    def __init__(self) -> None:
-        self._entries: list[InMemoryPrivacyLedger._Entry] = []
-
-    def record(
-        self, *, user_id: str, family: str, cell: str, period: date, epsilon: float
-    ) -> None:
-        if epsilon < 0:
-            raise ValueError("epsilon must be non-negative")
-        self._entries.append(self._Entry(user_id=user_id, family=family, cell=cell, period=period, epsilon=epsilon))
-
-    def user_spent(self, user_id: str, *, since: date) -> float:
-        return sum(e.epsilon for e in self._entries if e.user_id == user_id and e.period >= since)
-
-    def cell_spent(self, cell: str, *, since: date) -> float:
-        return sum(e.epsilon for e in self._entries if e.cell == cell and e.period >= since)
-
-    def all_user_totals(self, *, since: date) -> dict[str, float]:
-        totals: dict[str, float] = defaultdict(float)
-        for e in self._entries:
-            if e.period >= since:
-                totals[e.user_id] += e.epsilon
-        return dict(totals)

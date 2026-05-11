@@ -2,19 +2,23 @@ from __future__ import annotations
 
 from datetime import date
 
-from dp_group_stats import compute_period_index, get_period_bounds, period_before
+from dp_group_stats.periods import (
+    compute_period_index,
+    get_period_bounds,
+    period_before,
+)
 
 
 def test_get_period_bounds_weekly() -> None:
     start, end = get_period_bounds(date(2026, 3, 18), "weekly")
-    assert start == date(2026, 3, 16)
-    assert end == date(2026, 3, 22)
+    assert start == date(2026, 3, 16)  # Monday
+    assert end == date(2026, 3, 22)  # Sunday
 
 
 def test_get_period_bounds_biweekly() -> None:
     start, end = get_period_bounds(date(2026, 3, 18), "biweekly")
-    assert start == date(2026, 3, 9)
-    assert end == date(2026, 3, 22)
+    assert start == date(2026, 3, 9)  # Monday of week 11
+    assert end == date(2026, 3, 22)  # Sunday of week 12
 
 
 def test_get_period_bounds_monthly() -> None:

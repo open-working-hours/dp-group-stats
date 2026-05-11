@@ -1,22 +1,24 @@
-"""Laplace mechanism for differential privacy: noise generation and confidence intervals."""
-
 from __future__ import annotations
 
 import math
 import secrets
 from typing import Protocol
 
-__all__ = ["laplace_noise", "laplace_ci_half_width"]
-
 
 class _UniformRng(Protocol):
     def uniform(self, a: float, b: float) -> float: ...
 
 
-def laplace_noise(epsilon: float, sensitivity: float, rng: _UniformRng | None = None) -> float:
-    """Sample Laplace noise calibrated to the given epsilon and sensitivity.
+def laplace_noise(
+    epsilon: float,
+    sensitivity: float,
+    rng: _UniformRng | None = None,
+) -> float:
+    """Sample from a Laplace distribution calibrated to (epsilon, sensitivity).
 
-    Uses ``secrets.SystemRandom`` by default; inject *rng* for deterministic tests.
+    Uses inverse CDF sampling. The ``rng`` parameter allows deterministic
+    testing; when omitted, ``secrets.SystemRandom`` is used for
+    cryptographic-quality randomness.
     """
     if epsilon <= 0:
         raise ValueError("epsilon must be positive")
@@ -41,10 +43,11 @@ def laplace_ci_half_width(
     confidence: float = 0.90,
     rounding: int = 5,
 ) -> tuple[float, int]:
-    """Compute half-width of a confidence interval for a Laplace-noised mean.
+    """Compute the half-width of a confidence interval for a Laplace-noised mean.
 
-    Returns (ci_half_width, n_display) where n_display is n_users rounded
-    down to the nearest multiple of `rounding` (floored at `rounding`).
+    Returns ``(ci_half_width, n_display)`` where ``n_display`` is ``n_users``
+    rounded down to the nearest multiple of ``rounding`` (floored at ``rounding``)
+    to avoid leaking exact group size.
     """
     if epsilon <= 0:
         raise ValueError("epsilon must be positive")

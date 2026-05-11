@@ -1,25 +1,13 @@
-"""Configuration dataclasses for the DP group statistics pipeline."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
 
-__all__ = [
-    "PeriodType",
-    "periods_per_year",
-    "ContributionBounds",
-    "EpsilonSplit",
-    "ReleasePolicyConfig",
-    "DPGroupStatsV1Config",
-]
-
 PeriodType = Literal["weekly", "biweekly", "monthly"]
-"""Supported aggregation period granularities."""
 
 
 def periods_per_year(period_type: PeriodType) -> int:
-    """Return the number of aggregation periods in a year for the given period type."""
+    """Return the number of aggregation periods in a year."""
     if period_type == "weekly":
         return 52
     elif period_type == "biweekly":
@@ -31,7 +19,12 @@ def periods_per_year(period_type: PeriodType) -> int:
 
 @dataclass(frozen=True, slots=True)
 class ContributionBounds:
-    """Per-user weekly hour clipping bounds for planned and actual hours."""
+    """Clipping bounds for user contributions per period.
+
+    Values outside these bounds are clipped before aggregation,
+    bounding the sensitivity of the DP mechanism.
+    """
+
     planned_weekly_min: float = 0.0
     planned_weekly_max: float = 80.0
     actual_weekly_min: float = 0.0
@@ -49,10 +42,19 @@ class ContributionBounds:
     def clip_actual(self, value: float) -> float:
         return min(max(value, self.actual_weekly_min), self.actual_weekly_max)
 
+    @property
+    def planned_sensitivity(self) -> float:
+        return self.planned_weekly_max - self.planned_weekly_min
+
+    @property
+    def actual_sensitivity(self) -> float:
+        return self.actual_weekly_max - self.actual_weekly_min
+
 
 @dataclass(frozen=True, slots=True)
 class EpsilonSplit:
-    """How the per-period epsilon budget is split between planned and actual sums."""
+    """How total per-cell epsilon is divided across noised quantities."""
+
     planned_sum: float = 0.2
     actual_sum: float = 0.8
 
@@ -67,7 +69,8 @@ class EpsilonSplit:
 
 @dataclass(frozen=True, slots=True)
 class ReleasePolicyConfig:
-    """Non-DP publication rules: k-anonymity, dominance, activation/deactivation timing."""
+    """Non-DP publication safeguards layered on top of the DP mechanism."""
+
     k_min: int = 5
     activation_weeks: int = 2
     deactivation_grace_weeks: int = 2
@@ -86,8 +89,13 @@ class ReleasePolicyConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class DPGroupStatsV1Config:
-    """Top-level configuration combining bounds, epsilon split, release policy, and budget cap."""
+class DPGroupStatsConfig:
+    """Top-level configuration for the DP group statistics pipeline.
+
+    Validates that the configured epsilon budget is consistent with
+    the annual cap at construction time.
+    """
+
     bounds: ContributionBounds = field(default_factory=ContributionBounds)
     epsilon_split: EpsilonSplit = field(default_factory=EpsilonSplit)
     release_policy: ReleasePolicyConfig = field(default_factory=ReleasePolicyConfig)
@@ -100,6 +108,6 @@ class DPGroupStatsV1Config:
             annual_spend = self.epsilon_split.total * n_periods
             if annual_spend > self.annual_epsilon_cap:
                 raise ValueError(
-                    f"Per-period ε ({self.epsilon_split.total}) × {n_periods} = {annual_spend} "
+                    f"Per-period epsilon ({self.epsilon_split.total}) x {n_periods} = {annual_spend} "
                     f"exceeds annual cap ({self.annual_epsilon_cap})"
                 )

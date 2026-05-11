@@ -1,6 +1,22 @@
-"""dp-group-stats: Differentially private group statistics for working-hours data."""
+"""Differentially private publication pipeline for aggregate group statistics.
 
-__version__ = "0.1.0"
+``dp-group-stats`` provides the building blocks for publishing aggregate
+statistics over small groups while protecting individual contributions
+with differential privacy and k-anonymity gating.
+
+Key components:
+
+- **Configuration** (:mod:`.config`): contribution bounds, epsilon splits,
+  release policy parameters, and top-level pipeline config with budget validation.
+- **Mechanisms** (:mod:`.mechanisms`): Laplace noise sampling and confidence
+  interval computation.
+- **Policy** (:mod:`.policy`): publication state machine with activation
+  streaks and cooling-down grace periods.
+- **Accounting** (:mod:`.accounting`): epsilon budget tracking with a
+  pluggable :class:`PrivacyLedger` protocol and an in-memory implementation.
+- **Periods** (:mod:`.periods`): temporal coarsening utilities for weekly,
+  biweekly, and monthly aggregation.
+"""
 
 from .accounting import (
     BudgetEntry,
@@ -13,51 +29,42 @@ from .accounting import (
 )
 from .config import (
     ContributionBounds,
-    DPGroupStatsV1Config,
+    DPGroupStatsConfig,
     EpsilonSplit,
     PeriodType,
     ReleasePolicyConfig,
     periods_per_year,
 )
 from .mechanisms import laplace_ci_half_width, laplace_noise
-from .periods import (
-    compute_period_index,
-    get_iso_week_bounds,
-    get_period_bounds,
-    period_before,
-)
+from .periods import compute_period_index, get_period_bounds, period_before
 from .policy import PublicationStatus, get_publication_status
 
-from .simulation import ScenarioResult, run_scenario
+__version__ = "0.1.0"
 
 __all__ = [
-    # simulation
-    "run_scenario",
-    "ScenarioResult",
     # config
-    "PeriodType",
-    "periods_per_year",
     "ContributionBounds",
+    "DPGroupStatsConfig",
     "EpsilonSplit",
+    "PeriodType",
     "ReleasePolicyConfig",
-    "DPGroupStatsV1Config",
+    "periods_per_year",
     # mechanisms
-    "laplace_noise",
     "laplace_ci_half_width",
+    "laplace_noise",
     # policy
     "PublicationStatus",
     "get_publication_status",
-    # periods
-    "get_iso_week_bounds",
-    "get_period_bounds",
-    "period_before",
-    "compute_period_index",
     # accounting
-    "CellKey",
     "BudgetEntry",
+    "CellKey",
     "EpsilonBreakdown",
     "EpsilonLedger",
-    "compute_adaptive_epsilon",
-    "PrivacyLedger",
     "InMemoryPrivacyLedger",
+    "PrivacyLedger",
+    "compute_adaptive_epsilon",
+    # periods
+    "compute_period_index",
+    "get_period_bounds",
+    "period_before",
 ]
