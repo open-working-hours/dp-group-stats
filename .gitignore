@@ -9,3 +9,4 @@ build/
 .mypy_cache/
 *.egg
 .DS_Store
+uv.lock

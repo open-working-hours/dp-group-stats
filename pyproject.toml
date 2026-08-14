@@ -46,9 +46,9 @@ dev = ["pytest>=7.0"]
 dp-group-stats-simulate = "dp_group_stats.simulation:main"
 
 [project.urls]
-Homepage = "https://github.com/lukashondrich/dp-group-stats"
-Repository = "https://github.com/lukashondrich/dp-group-stats"
-Documentation = "https://github.com/lukashondrich/dp-group-stats/tree/main/docs"
+Homepage = "https://github.com/open-working-hours/dp-group-stats"
+Repository = "https://github.com/open-working-hours/dp-group-stats"
+Documentation = "https://github.com/open-working-hours/dp-group-stats/tree/main/docs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dp_group_stats"]
