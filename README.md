@@ -138,6 +138,15 @@ This library makes specific choices documented in the [design specs](https://git
 
 This library was extracted from [Open Working Hours](https://openworkinghours.org), a privacy-first platform for healthcare workers to track and report working hours. The design was validated through [200+ simulation scenarios](https://github.com/open-working-hours/dp-group-stats/blob/main/docs/simulation-spec.md) covering parameter selection for workforce statistics.
 
+## Use of generative AI
+
+This project is developed with an AI coding assistant (Anthropic's Claude, via the Claude Code CLI) used as a pair-programming tool. The division of labour:
+
+- **Human-authored:** the privacy mechanism design and the specification documents in [`docs/`](https://github.com/open-working-hours/dp-group-stats/tree/main/docs) (neighboring relation, accounting model, simulation spec), parameter decisions, and review of every change before it is committed.
+- **Assistant-assisted:** implementation drafts written against those specs, test scaffolding, review of diffs, and documentation drafts.
+
+Commits that contain assistant-generated code carry a `Co-Authored-By` trailer naming the model. Going forward, such commits also state the model version and summarise the prompts or interaction in the commit message, in line with the [NLnet generative AI policy](https://nlnet.nl/foundation/policies/generativeAI/). The maintainer takes full responsibility for the correctness of all code regardless of how it was drafted.
+
 ## License
 
 MIT
