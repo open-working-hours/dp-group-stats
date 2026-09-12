@@ -140,12 +140,16 @@ This library was extracted from [Open Working Hours](https://openworkinghours.or
 
 ## Use of generative AI
 
-This project is developed with an AI coding assistant (Anthropic's Claude, via the Claude Code CLI) used as a pair-programming tool. The division of labour:
+This project is developed with an AI assistant (Anthropic's Claude, via the Claude Code CLI). It is used in three ways: as a research aid (finding and summarising methods, papers and comparable projects, which are then checked against the sources), as a reviewer (pressure-testing designs, code and documents), and as a pair programmer.
+
+The division of labour:
 
 - **Human-authored:** the privacy mechanism design and the specification documents in [`docs/`](https://github.com/open-working-hours/dp-group-stats/tree/main/docs) (neighboring relation, accounting model, simulation spec), parameter decisions, and review of every change before it is committed.
 - **Assistant-assisted:** implementation drafts written against those specs, test scaffolding, review of diffs, and documentation drafts.
 
-Commits that contain assistant-generated code carry a `Co-Authored-By` trailer naming the model. Going forward, such commits also state the model version and summarise the prompts or interaction in the commit message, in line with the [NLnet generative AI policy](https://nlnet.nl/foundation/policies/generativeAI/). The maintainer takes full responsibility for the correctness of all code regardless of how it was drafted.
+Provenance: commits that contain assistant-generated code carry a `Co-Authored-By` trailer naming the model and version, and state in the commit message how the assistant was used, with the prompts or a summary of the interaction. Purely human-authored commits carry no trailer. This follows the [NLnet generative AI policy](https://nlnet.nl/foundation/policies/generativeAI/); commits before September 2026 carry the trailer but not the prompt summary.
+
+The maintainer reviews all assistant output for correctness and for licence compatibility before it is committed, can explain every design and code decision in this repository, and takes full responsibility for the result regardless of how it was drafted.
 
 ## License
 
